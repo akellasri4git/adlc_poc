@@ -23,9 +23,11 @@ def supervisor_node(state: AgentState):
     needs_design = intent in ("design_only", "full_cycle")
     needs_code = intent in ("code_only", "full_cycle")
 
-    if needs_design and not state.get("design"):
+    if state.get("stopped"):
+        nxt = "FINISH"
+    elif needs_design and not state.get("design"):
         nxt = "designer"
-    elif needs_code and not state.get("code"):
+    elif needs_code and not state.get("merged_files") and not state.get("code"):
         nxt = "developer"
     else:
         nxt = "FINISH"

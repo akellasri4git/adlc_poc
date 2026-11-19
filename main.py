@@ -1,6 +1,6 @@
 """Runs every user story in stories/*.md through the graph, in the terminal.
 
-Normal run (asks you to approve each design / code):
+Normal run (asks you to approve each design / merge):
     python3 main.py
 
 Fully automatic run (approves everything, no questions):
@@ -18,38 +18,54 @@ AUTO_APPROVE = os.getenv("AUTO_APPROVE", "false").lower() == "true"
 
 
 def ask_human(payload: dict) -> dict:
+    stage = "MERGE CODE CHANGES" if payload["stage"] == "merge" else payload["stage"].upper()
     print("\n" + "=" * 60)
-    print(f"APPROVAL NEEDED: {payload['stage'].upper()}")
+    print(f"APPROVAL NEEDED: {stage}   (rejections left: {payload['rejections_left']})")
     print("-" * 60)
     print(payload["content"])
+    if payload.get("diff"):
+        print("-" * 60)
+        print(payload["diff"])
     print("=" * 60)
 
     if AUTO_APPROVE:
         print("(AUTO_APPROVE on -> approved)")
         return {"action": "approve"}
 
-    answer = input("Approve? [y = yes / n = reject]: ").strip().lower()
-    if answer == "y":
-        return {"action": "approve"}
-    feedback = input("What should be changed? ")
-    return {"action": "reject", "feedback": feedback}
+    while True:
+        answer = input("Approve? [y = approve / n = reject]: ").strip().lower()
+        if answer == "y":
+            return {"action": "approve"}
+        if answer != "n":
+            continue
+        feedback = ""
+        while not feedback:
+            feedback = input("What should be changed? ").strip()
+        confirm = input(f'Reject with feedback "{feedback}"? [y = confirm / n = cancel]: ').strip().lower()
+        if confirm == "y":
+            return {"action": "reject", "feedback": feedback}
+        print("Rejection cancelled.")
 
 
-def run_requirement(app, name: str, requirement: str):
-    print(f"\n\n######## {requirement}")
-    config = {"configurable": {"thread_id": name}}  # one thread per requirement
+def run_story(app, story: dict):
+    requirement = story_to_requirement(story)
+    print(f"\n\n######## {requirement.splitlines()[0]}")
+    config = {"configurable": {"thread_id": story["id"]}}
 
     app.invoke({"requirement": requirement}, config)
 
     # keep resuming until the graph stops asking for approval
     while (payload := pending_interrupt(app, config)) is not None:
-        decision = ask_human(payload)
-        app.invoke(Command(resume=decision), config)
+        app.invoke(Command(resume=ask_human(payload)), config)
 
     result = app.get_state(config).values
     print("\nINTENT:", result.get("intent"))
-    print("\nDESIGN:\n", result.get("design"))
-    print("\nCODE:\n", result.get("code"))
+    if result.get("stopped"):
+        print("STOPPED:", result["stopped"])
+    if result.get("design"):
+        print("\nDESIGN:\n", result["design"])
+    if result.get("merged_files") is not None:
+        print("\nMERGED into workspace/:", ", ".join(result["merged_files"]) or "(no changes)")
     return result
 
 
@@ -57,4 +73,4 @@ if __name__ == "__main__":
     print("main.py started")
     app = build_graph()
     for story in load_stories():
-        run_requirement(app, story["id"], story_to_requirement(story))
+        run_story(app, story)

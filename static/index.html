@@ -8,23 +8,26 @@
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #646d7d; --line: #e2e5ea;
     --accent: #2f5bd3; --accent-soft: #e8eefc; --ok: #1f7a4d; --ok-soft: #e4f4ec;
-    --warn: #9a5b00; --warn-soft: #fdf1dc; --bad: #b3261e; --code-bg: #f1f3f6;
+    --warn: #9a5b00; --warn-soft: #fdf1dc; --bad: #b3261e; --bad-soft: #fce8e6; --code-bg: #f1f3f6;
+    --add: #e6f6ea; --add-text: #1a6b36; --del: #fdecea; --del-text: #a32019;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #13161c; --panel: #1b1f27; --text: #e6e8ec; --muted: #9aa3b2; --line: #2c323d;
       --accent: #7c9cf5; --accent-soft: #232c45; --ok: #5cc28f; --ok-soft: #1a3328;
-      --warn: #e7b25c; --warn-soft: #3a2e19; --bad: #f2867e; --code-bg: #12151b;
+      --warn: #e7b25c; --warn-soft: #3a2e19; --bad: #f2867e; --bad-soft: #3d1f1d; --code-bg: #12151b;
+      --add: #16301f; --add-text: #7fd6a0; --del: #3a1b1a; --del-text: #f2a19a;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  header { display: flex; align-items: center; gap: 12px; padding: 16px 24px;
+  header { display: flex; align-items: center; gap: 12px; padding: 16px 24px; flex-wrap: wrap;
            border-bottom: 1px solid var(--line); background: var(--panel); }
   header h1 { font-size: 18px; margin: 0; }
   header p { margin: 0; color: var(--muted); font-size: 13px; }
-  .badge { margin-left: auto; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+  .head-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  .badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
   .badge.mock { background: var(--warn-soft); color: var(--warn); }
   .badge.real { background: var(--ok-soft); color: var(--ok); }
   main { display: grid; grid-template-columns: 340px 1fr; gap: 20px; padding: 20px 24px; max-width: 1300px; margin: 0 auto; }
@@ -48,6 +51,9 @@
   .primary { background: var(--accent); color: #fff; }
   .approve { background: var(--ok); color: #fff; }
   .reject { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+  .danger { background: var(--bad); color: #fff; }
+  .ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  .small { font-size: 13px; padding: 6px 12px; }
   .stack > * + * { margin-top: 16px; }
   .steps { list-style: none; margin: 0; padding: 0; }
   .steps li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
@@ -55,25 +61,45 @@
   .steps .n { font: 600 13px ui-monospace, Menlo, monospace; min-width: 120px; }
   .steps .d { color: var(--muted); }
   .approval { border-color: var(--warn); background: var(--warn-soft); }
-  .approval h3 { margin: 0 0 10px; color: var(--warn); font-size: 16px; }
+  .approval h3 { margin: 0; color: var(--warn); font-size: 16px; }
+  .approval .sub { margin: 2px 0 12px; font-size: 13px; color: var(--muted); }
+  .confirm { margin-top: 14px; padding: 14px; border-radius: 8px; border: 1px solid var(--bad); background: var(--bad-soft); }
+  .confirm p { margin: 0; }
+  .confirm blockquote { margin: 8px 0 0; padding-left: 10px; border-left: 3px solid var(--bad); white-space: pre-wrap; }
   pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
         margin: 0; overflow-x: auto; font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; color: var(--text); }
+  pre.diff { padding: 8px 0; white-space: pre; }
+  .diff span { display: block; padding: 0 12px; }
+  .diff .add { background: var(--add); color: var(--add-text); }
+  .diff .del { background: var(--del); color: var(--del-text); }
+  .diff .hunk { color: var(--accent); }
+  .diff .meta { color: var(--muted); font-weight: 600; }
+  .files { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+  .file { font: 12px ui-monospace, Menlo, monospace; padding: 3px 8px; border-radius: 4px; background: var(--panel); border: 1px solid var(--line); }
+  .file b { font-family: -apple-system, sans-serif; font-size: 11px; text-transform: uppercase; margin-right: 6px; }
+  .file.added b { color: var(--add-text); } .file.modified b { color: var(--warn); }
   textarea { width: 100%; min-height: 70px; font: inherit; padding: 10px; border-radius: 8px;
              border: 1px solid var(--line); background: var(--panel); color: var(--text); margin-top: 12px; }
-  .done h3 { color: var(--ok); margin: 0 0 6px; font-size: 16px; }
+  .result h3 { margin: 0 0 6px; font-size: 16px; }
+  .result .ok { color: var(--ok); } .result .stop { color: var(--bad); }
   .result h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); }
   .empty { color: var(--muted); }
-  .error { color: var(--bad); }
-  .hidden { display: none; }
+  .error { color: var(--bad); font-size: 14px; }
+  .note { color: var(--muted); font-size: 13px; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 <header>
   <div>
     <h1>ADLC Agent Demo</h1>
-    <p>Supervisor → Designer / Developer → Human review</p>
+    <p>Jira story → Designer → 👤 review → Developer → 👤 review changes → Merge</p>
   </div>
-  <span id="mode" class="badge"></span>
+  <div class="head-right">
+    <span id="reset-msg" class="note"></span>
+    <button class="ghost small" id="btn-reset" title="Restore workspace/ to the original sample code">Reset sample code</button>
+    <span id="mode" class="badge"></span>
+  </div>
 </header>
 
 <main>
@@ -93,20 +119,37 @@
 
       <div id="approval" class="card approval hidden">
         <h3 id="approval-title"></h3>
+        <p class="sub" id="approval-sub"></p>
+        <p id="merge-summary" class="hidden"></p>
+        <div id="merge-files" class="files hidden"></div>
         <pre id="approval-content"></pre>
-        <textarea id="feedback" placeholder="Feedback (required if you reject)"></textarea>
-        <div class="row">
-          <button class="approve" id="btn-approve">Approve</button>
-          <button class="reject" id="btn-reject">Reject with feedback</button>
-          <span id="approval-error" class="error"></span>
+
+        <div id="decide">
+          <textarea id="feedback" placeholder="Feedback (required if you reject)"></textarea>
+          <div class="row">
+            <button class="approve" id="btn-approve">Approve</button>
+            <button class="reject" id="btn-reject">Reject…</button>
+            <span id="approval-error" class="error"></span>
+          </div>
+        </div>
+
+        <div id="confirm" class="confirm hidden">
+          <p>You're about to <b>reject the <span id="confirm-stage"></span></b> with this feedback:</p>
+          <blockquote id="confirm-feedback"></blockquote>
+          <p class="note" id="confirm-note" style="margin-top:8px"></p>
+          <div class="row">
+            <button class="danger" id="btn-confirm">Confirm rejection</button>
+            <button class="ghost" id="btn-cancel">Cancel</button>
+          </div>
         </div>
       </div>
 
       <div id="result" class="card result hidden">
-        <div class="done"><h3>✓ Finished</h3></div>
+        <h3 id="result-title"></h3>
+        <p id="result-reason" class="error hidden"></p>
         <h4>Intent</h4><pre id="r-intent"></pre>
-        <div id="r-design-wrap"><h4>Design</h4><pre id="r-design"></pre></div>
-        <div id="r-code-wrap"><h4>Code</h4><pre id="r-code"></pre></div>
+        <div id="r-design-wrap"><h4>Approved design</h4><pre id="r-design"></pre></div>
+        <div id="r-merge-wrap"><h4 id="r-merge-title"></h4><pre id="r-diff" class="diff"></pre></div>
       </div>
     </div>
   </section>
@@ -114,7 +157,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
-let stories = [], selected = null, runId = null;
+let selected = null, runId = null, pending = null, busy = false;
 
 async function api(path, body) {
   const res = await fetch(path, body ? {
@@ -132,47 +175,57 @@ function el(tag, attrs = {}, text) {
   return e;
 }
 
+function renderDiff(pre, text) {
+  pre.replaceChildren();
+  (text || "").split("\n").forEach((line) => {
+    let cls = "";
+    if (line.startsWith("+++") || line.startsWith("---")) cls = "meta";
+    else if (line.startsWith("+")) cls = "add";
+    else if (line.startsWith("-")) cls = "del";
+    else if (line.startsWith("@@")) cls = "hunk";
+    pre.append(el("span", { className: cls }, line || " "));
+  });
+}
+
+const stageName = (s) => (s === "merge" ? "code changes" : s);
+
 async function init() {
   const cfg = await api("/api/config");
   $("mode").textContent = cfg.mock ? "MOCK LLM" : "REAL LLM";
   $("mode").className = "badge " + (cfg.mock ? "mock" : "real");
 
-  stories = await api("/api/stories");
-  const list = $("stories");
+  const stories = await api("/api/stories");
   stories.forEach((s) => {
     const card = el("div", { className: "card story" });
     card.append(el("span", { className: "sid" }, s.id), el("h3", {}, s.title));
     card.onclick = () => selectStory(s, card);
-    list.append(card);
+    $("stories").append(card);
   });
 }
 
 function selectStory(s, card) {
+  if (busy) return;
   selected = s;
   document.querySelectorAll(".story").forEach((c) => c.classList.remove("selected"));
   card.classList.add("selected");
 
-  const d = $("detail");
-  d.replaceChildren(
-    el("span", { className: "sid" }, s.id),
-    el("h3", {}, s.title),
-    el("h4", {}, "Description"),
-    el("p", {}, s.description),
-    el("h4", {}, "Acceptance criteria"),
-  );
   const ul = el("ul");
   s.acceptance_criteria.forEach((c) => ul.append(el("li", {}, c)));
   const btn = el("button", { className: "primary" }, "▶ Run story");
   btn.onclick = () => startRun(btn);
   const row = el("div", { className: "row" });
   row.append(btn);
-  d.append(ul, row);
-
+  $("detail").replaceChildren(
+    el("span", { className: "sid" }, s.id), el("h3", {}, s.title),
+    el("h4", {}, "Description"), el("p", {}, s.description),
+    el("h4", {}, "Acceptance criteria"), ul, row,
+  );
   $("run").classList.add("hidden");
 }
 
 async function startRun(btn) {
-  btn.disabled = true; btn.textContent = "Running…";
+  if (busy) return;
+  busy = true; btn.disabled = true; btn.textContent = "Running…";
   $("run").classList.remove("hidden");
   $("steps").replaceChildren(el("li", { className: "empty" }, "Running…"));
   $("approval").classList.add("hidden");
@@ -182,55 +235,113 @@ async function startRun(btn) {
   } catch (e) {
     $("steps").replaceChildren(el("li", { className: "error" }, e.message));
   }
-  btn.disabled = false; btn.textContent = "↻ Run again";
+  busy = false; btn.disabled = false; btn.textContent = "↻ Run again";
 }
 
-async function decide(action) {
+function showConfirm(show) {
+  $("decide").classList.toggle("hidden", show);
+  $("confirm").classList.toggle("hidden", !show);
+}
+
+function askReject() {
   const feedback = $("feedback").value.trim();
-  if (action === "reject" && !feedback) {
-    $("approval-error").textContent = "Please type what should change.";
+  if (!feedback) {
+    $("approval-error").textContent = "Type what should change first.";
+    $("feedback").focus();
     return;
   }
   $("approval-error").textContent = "";
-  $("btn-approve").disabled = $("btn-reject").disabled = true;
+  $("confirm-stage").textContent = stageName(pending.stage);
+  $("confirm-feedback").textContent = feedback;
+  const left = pending.rejections_left - 1;
+  $("confirm-note").textContent = left > 0
+    ? `The ${pending.stage === "merge" ? "Developer" : "Designer"} will redo it using your feedback. Rejections left after this: ${left}.`
+    : "This is the last allowed rejection. The run will stop and need manual follow-up.";
+  showConfirm(true);
+}
+
+async function send(action) {
+  if (busy) return;
+  busy = true;
+  ["btn-approve", "btn-reject", "btn-confirm", "btn-cancel"].forEach((id) => ($(id).disabled = true));
   try {
-    render(await api(`/api/runs/${runId}/decision`, { action, feedback }));
+    render(await api(`/api/runs/${runId}/decision`, { action, feedback: $("feedback").value.trim() }));
   } catch (e) {
+    showConfirm(false);
     $("approval-error").textContent = e.message;
   }
-  $("btn-approve").disabled = $("btn-reject").disabled = false;
+  ["btn-approve", "btn-reject", "btn-confirm", "btn-cancel"].forEach((id) => ($(id).disabled = false));
+  busy = false;
 }
 
 function render(run) {
   runId = run.run_id;
-  const steps = $("steps");
-  steps.replaceChildren();
-  run.steps.forEach((s) => {
+  pending = run.pending;
+  $("steps").replaceChildren(...run.steps.map((s) => {
     const li = el("li");
     li.append(el("span", { className: "n" }, s.node), el("span", { className: "d" }, s.detail));
-    steps.append(li);
-  });
+    return li;
+  }));
 
   const waiting = run.status === "awaiting_approval";
   $("approval").classList.toggle("hidden", !waiting);
   $("result").classList.toggle("hidden", waiting);
 
   if (waiting) {
-    $("approval-title").textContent = `Approval needed: ${run.pending.stage.toUpperCase()}`;
-    $("approval-content").textContent = run.pending.content;
+    const merge = pending.stage === "merge";
+    $("approval-title").textContent = merge ? "Review code changes before merge" : "Approval needed: DESIGN";
+    $("approval-sub").textContent = `Rejections left: ${pending.rejections_left}`;
+    $("btn-approve").textContent = merge ? "Approve & merge" : "Approve design";
+    $("merge-summary").classList.toggle("hidden", !merge);
+    $("merge-files").classList.toggle("hidden", !merge);
+    if (merge) {
+      $("merge-summary").textContent = pending.content;
+      $("merge-files").replaceChildren(...pending.files.map((f) => {
+        const chip = el("span", { className: "file " + f.status });
+        chip.append(el("b", {}, f.status), document.createTextNode(f.path));
+        return chip;
+      }));
+      $("approval-content").className = "diff";
+      renderDiff($("approval-content"), pending.diff);
+    } else {
+      $("approval-content").className = "";
+      $("approval-content").textContent = pending.content;
+    }
     $("feedback").value = "";
+    $("approval-error").textContent = "";
+    showConfirm(false);
   } else {
     const r = run.result;
+    const stopped = run.status === "stopped";
+    $("result-title").textContent = stopped ? "■ Stopped" : "✓ Finished";
+    $("result-title").className = stopped ? "stop" : "ok";
+    $("result-reason").textContent = r.stopped || "";
+    $("result-reason").classList.toggle("hidden", !stopped);
     $("r-intent").textContent = r.intent;
     $("r-design").textContent = r.design || "";
-    $("r-code").textContent = r.code || "";
     $("r-design-wrap").classList.toggle("hidden", !r.design);
-    $("r-code-wrap").classList.toggle("hidden", !r.code);
+    const merged = Array.isArray(r.merged_files);
+    $("r-merge-wrap").classList.toggle("hidden", !merged);
+    if (merged) {
+      $("r-merge-title").textContent = "Merged into workspace/: " + (r.merged_files.join(", ") || "no changes");
+      renderDiff($("r-diff"), r.diff);
+    }
   }
 }
 
-$("btn-approve").onclick = () => decide("approve");
-$("btn-reject").onclick = () => decide("reject");
+$("btn-approve").onclick = () => send("approve");
+$("btn-reject").onclick = askReject;
+$("btn-confirm").onclick = () => send("reject");
+$("btn-cancel").onclick = () => showConfirm(false);
+$("btn-reset").onclick = async () => {
+  try {
+    await api("/api/workspace/reset", {});
+    $("reset-msg").textContent = "Sample code restored";
+  } catch (e) {
+    $("reset-msg").textContent = "Reset failed: " + e.message;
+  }
+  setTimeout(() => ($("reset-msg").textContent = ""), 3000);
+};
 init().catch((e) => { $("stories").textContent = "Could not load: " + e.message; });
 </script>
 </body>

@@ -44,7 +44,10 @@ class _FakeStructured:
         self.schema = schema
 
     def invoke(self, prompt: str):
-        # Only the supervisor uses structured output: guess the intent from keywords.
+        if self.schema.__name__ == "CodeChanges":
+            return self.schema.model_validate(_mock_code_changes(prompt))
+
+        # Supervisor: guess the intent from keywords.
         req = prompt.split("Requirement:", 1)[-1].lower()
         if re.search(r"only (the )?design", req):
             intent = "design_only"
@@ -66,6 +69,55 @@ def _criteria(prompt: str) -> list[str]:
             break
         items.append(line[2:].strip())
     return items
+
+
+_STOPWORDS = {"a", "an", "the", "user", "users", "can", "with", "and", "to", "of", "is",
+              "are", "be", "by", "for", "in", "on", "their", "they", "every", "all", "when"}
+
+
+def _func_name(criterion: str) -> str:
+    plain = re.sub(r"'s\b", "", criterion.lower())
+    words = [w for w in re.findall(r"[a-z0-9]+", plain) if w not in _STOPWORDS]
+    name = "_".join(words[:4]) or "criterion"
+    return name if name[0].isalpha() else f"ac_{name}"
+
+
+def _mock_code_changes(prompt: str) -> dict:
+    """Fake developer: bump VERSION and add one stub function per acceptance criterion
+    to the existing file that matches the story (or a new file if none matches)."""
+    first_line = _field(prompt, "Requirement")            # "ADLC-101: Title"
+    story_id, _, title = first_line.partition(":")
+    story_id, title = story_id.strip(), title.strip()
+    feedback = _field(prompt, r"\(empty if first attempt\)")
+    files = dict(re.findall(r"### FILE: (.+?)\n(.*?)\n### END FILE", prompt, re.DOTALL))
+
+    key = re.sub(r"[^a-z0-9]", "", title.lower())
+    target = next((p for p in files if Path(p).stem.split("_")[0] in key), None)
+    if target:
+        text = files[target]
+    else:
+        target = story_id.lower().replace("-", "_") + ".py"
+        text = f'"""{title} (new module)."""\n\nVERSION = "1.0.0"\n'
+
+    # remove this story's block from an earlier merge, so re-runs replace it
+    text = re.sub(rf"\n*# --- {re.escape(story_id)}: .*?# --- end {re.escape(story_id)} ---\n?",
+                  "\n", text, flags=re.DOTALL).rstrip("\n") + "\n"
+    text = re.sub(r'VERSION = "(\d+)\.(\d+)\.\d+"',
+                  lambda m: f'VERSION = "{m[1]}.{int(m[2]) + 1}.0"', text, count=1)
+
+    block = [f"\n\n# --- {story_id}: {title} ---"]
+    if feedback:
+        block.append(f"# Reviewer feedback addressed: {feedback}")
+    for i, c in enumerate(_criteria(prompt), 1):
+        block.append(f'\n\ndef {_func_name(c)}():\n    """AC{i}: {c}"""\n'
+                     f'    raise NotImplementedError("TODO: implement")')
+    block.append(f"\n\n# --- end {story_id} ---\n")
+
+    action = "updated" if target in files else "created"
+    return {
+        "summary": f"[MOCK] {story_id}: {action} {target} for {len(_criteria(prompt))} acceptance criteria",
+        "files": [{"path": target, "content": text + "\n".join(block)}],
+    }
 
 
 class FakeLLM:

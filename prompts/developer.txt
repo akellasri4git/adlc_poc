@@ -1,6 +1,9 @@
-You are a python developer. Write a minimal implementation that meets every acceptance criterion.
+You are a python developer. Change the existing project below so it meets every acceptance criterion. Return the full new content of every file you add or change (paths relative to the project root) and a one-line summary.
 Requirement: {requirement}
 Design: {design}
+
+Existing project files:
+{files}
 
 Reviewer feedback on your previous attempt (empty if first attempt):
 {feedback}

@@ -4,7 +4,7 @@ Start it:
     uvicorn app:app --reload
 Then open http://localhost:8000
 
-Pick a user story, run it, and approve or reject each design / code in the page.
+Pick a user story, run it, and approve or reject the design and the code merge in the page.
 The same graph, agents and MOCK setting (.env) as main.py are used.
 """
 import uuid
@@ -15,6 +15,7 @@ from fastapi.responses import HTMLResponse
 from langgraph.types import Command
 from pydantic import BaseModel
 
+import workspace
 from graph import build_graph, pending_interrupt
 from llm import MOCK
 from story_loader import get_story, load_stories, story_to_requirement
@@ -43,16 +44,26 @@ def _advance(run_id: str, graph_input) -> dict:
             if node == "__interrupt__":
                 continue
             values = values or {}
-            step = {"node": node}
-            if node == "supervisor":
-                step["detail"] = f"intent = {values.get('intent')} → next: {values.get('next')}"
-            elif node.endswith("_review"):
-                rejected = any(k.endswith("_feedback") and v for k, v in values.items())
-                step["detail"] = "rejected, sent back with feedback" if rejected else "approved"
-            else:
-                step["detail"] = "output ready for review"
-            runs[run_id]["steps"].append(step)
+            runs[run_id]["steps"].append({"node": node, "detail": _describe(node, values)})
     return _status(run_id)
+
+
+def _describe(node: str, values: dict) -> str:
+    if node == "supervisor":
+        return f"intent = {values.get('intent')} → next: {values.get('next')}"
+    if node.endswith("_review"):
+        if values.get("stopped"):
+            return "rejected → limit reached, run stopped"
+        if any(k.endswith("_feedback") and v for k, v in values.items()):
+            return "rejected → sent back with feedback"
+        return "approved"
+    if node == "developer":
+        return f"proposed changes to {len(values.get('changes') or [])} file(s)"
+    if node == "merge":
+        if values.get("stopped"):
+            return "merge failed: " + values["stopped"]
+        return "merged into workspace/: " + (", ".join(values.get("merged_files") or []) or "no changes")
+    return "output ready for review"
 
 
 def _status(run_id: str) -> dict:
@@ -62,13 +73,16 @@ def _status(run_id: str) -> dict:
     return {
         "run_id": run_id,
         "story_id": runs[run_id]["story_id"],
-        "status": "awaiting_approval" if payload else "done",
+        "status": "awaiting_approval" if payload else ("stopped" if values.get("stopped") else "done"),
         "pending": payload,
         "steps": runs[run_id]["steps"],
         "result": {
             "intent": values.get("intent"),
             "design": values.get("design"),
-            "code": values.get("code"),
+            "summary": values.get("code"),
+            "diff": values.get("diff"),
+            "merged_files": values.get("merged_files"),
+            "stopped": values.get("stopped"),
         },
     }
 
@@ -81,6 +95,12 @@ def index():
 @app.get("/api/config")
 def config():
     return {"mock": MOCK}
+
+
+@app.post("/api/workspace/reset")
+def reset_workspace():
+    workspace.reset_workspace()
+    return {"ok": True, "files": list(workspace.read_files())}
 
 
 @app.get("/api/stories")

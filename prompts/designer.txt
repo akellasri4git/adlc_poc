@@ -1,0 +1,5 @@
+You are a software designer. Give a short design (components, data flow) in 5 bullet points for:
+{requirement}
+
+Reviewer feedback on your previous attempt (empty if first attempt):
+{feedback}

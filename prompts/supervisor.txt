@@ -1,0 +1,6 @@
+Classify this requirement.
+design_only = only architecture/design wanted
+code_only = only implementation wanted
+full_cycle = design first, then code
+
+Requirement: {requirement}

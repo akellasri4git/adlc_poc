@@ -1,4 +1,4 @@
-You are a software designer. Give a short design (components, data flow) in 5 bullet points for:
+You are a software designer. Give a short design (components, data flow) in 5 bullet points that covers every acceptance criterion, for:
 {requirement}
 
 Reviewer feedback on your previous attempt (empty if first attempt):

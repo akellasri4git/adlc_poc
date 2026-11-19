@@ -1,18 +1,20 @@
-"""Runs every requirement in requirements/*.txt through the graph.
+"""Runs every user story in stories/*.md through the graph, in the terminal.
 
 Normal run (asks you to approve each design / code):
-    python main.py
+    python3 main.py
 
 Fully automatic run (approves everything, no questions):
-    PowerShell:  $env:AUTO_APPROVE="true"; python main.py
+    macOS / Linux:  AUTO_APPROVE=true python3 main.py
+    PowerShell:     $env:AUTO_APPROVE="true"; python main.py
+
+For the browser version, see app.py.
 """
 import os
-from pathlib import Path
 from langgraph.types import Command
-from graph import build_graph
+from graph import build_graph, pending_interrupt
+from story_loader import load_stories, story_to_requirement
 
 AUTO_APPROVE = os.getenv("AUTO_APPROVE", "false").lower() == "true"
-REQUIREMENTS_DIR = Path(__file__).parent / "requirements"
 
 
 def ask_human(payload: dict) -> dict:
@@ -33,17 +35,8 @@ def ask_human(payload: dict) -> dict:
     return {"action": "reject", "feedback": feedback}
 
 
-def pending_interrupt(app, config):
-    """Return the payload of the interrupt the graph is paused on, or None."""
-    snapshot = app.get_state(config)
-    for task in snapshot.tasks:
-        if task.interrupts:
-            return task.interrupts[0].value
-    return None
-
-
 def run_requirement(app, name: str, requirement: str):
-    print(f"\n\n######## {name}: {requirement}")
+    print(f"\n\n######## {requirement}")
     config = {"configurable": {"thread_id": name}}  # one thread per requirement
 
     app.invoke({"requirement": requirement}, config)
@@ -63,5 +56,5 @@ def run_requirement(app, name: str, requirement: str):
 if __name__ == "__main__":
     print("main.py started")
     app = build_graph()
-    for file in sorted(REQUIREMENTS_DIR.glob("*.txt")):
-        run_requirement(app, file.stem, file.read_text(encoding="utf-8").strip())
+    for story in load_stories():
+        run_requirement(app, story["id"], story_to_requirement(story))

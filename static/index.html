@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADLC Demo</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #646d7d; --line: #e2e5ea;
+    --accent: #2f5bd3; --accent-soft: #e8eefc; --ok: #1f7a4d; --ok-soft: #e4f4ec;
+    --warn: #9a5b00; --warn-soft: #fdf1dc; --bad: #b3261e; --code-bg: #f1f3f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #13161c; --panel: #1b1f27; --text: #e6e8ec; --muted: #9aa3b2; --line: #2c323d;
+      --accent: #7c9cf5; --accent-soft: #232c45; --ok: #5cc28f; --ok-soft: #1a3328;
+      --warn: #e7b25c; --warn-soft: #3a2e19; --bad: #f2867e; --code-bg: #12151b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 16px 24px;
+           border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 18px; margin: 0; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .badge { margin-left: auto; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+  .badge.mock { background: var(--warn-soft); color: var(--warn); }
+  .badge.real { background: var(--ok-soft); color: var(--ok); }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 20px; padding: 20px 24px; max-width: 1300px; margin: 0 auto; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 16px; } }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .story { cursor: pointer; margin-bottom: 10px; transition: border-color .15s; }
+  .story:hover { border-color: var(--accent); }
+  .story.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .sid { display: inline-block; font: 600 12px ui-monospace, Menlo, monospace; color: var(--accent);
+         background: var(--accent-soft); padding: 2px 8px; border-radius: 4px; }
+  .story h3 { font-size: 15px; margin: 8px 0 0; }
+  .detail h3 { font-size: 20px; margin: 10px 0 6px; }
+  .detail h4 { font-size: 13px; margin: 16px 0 6px; color: var(--muted); }
+  .detail p { margin: 0; white-space: pre-wrap; }
+  .detail ul { margin: 0; padding-left: 20px; }
+  .detail li { margin: 3px 0; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .primary { background: var(--accent); color: #fff; }
+  .approve { background: var(--ok); color: #fff; }
+  .reject { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+  .stack > * + * { margin-top: 16px; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  .steps li:last-child { border-bottom: 0; }
+  .steps .n { font: 600 13px ui-monospace, Menlo, monospace; min-width: 120px; }
+  .steps .d { color: var(--muted); }
+  .approval { border-color: var(--warn); background: var(--warn-soft); }
+  .approval h3 { margin: 0 0 10px; color: var(--warn); font-size: 16px; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+        margin: 0; overflow-x: auto; font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; color: var(--text); }
+  textarea { width: 100%; min-height: 70px; font: inherit; padding: 10px; border-radius: 8px;
+             border: 1px solid var(--line); background: var(--panel); color: var(--text); margin-top: 12px; }
+  .done h3 { color: var(--ok); margin: 0 0 6px; font-size: 16px; }
+  .result h4 { margin: 14px 0 6px; font-size: 13px; color: var(--muted); }
+  .empty { color: var(--muted); }
+  .error { color: var(--bad); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>ADLC Agent Demo</h1>
+    <p>Supervisor → Designer / Developer → Human review</p>
+  </div>
+  <span id="mode" class="badge"></span>
+</header>
+
+<main>
+  <section>
+    <h2>User stories</h2>
+    <div id="stories"></div>
+  </section>
+
+  <section class="stack">
+    <div id="detail" class="card detail"><p class="empty">Select a story on the left.</p></div>
+
+    <div id="run" class="stack hidden">
+      <div class="card">
+        <h2>Workflow steps</h2>
+        <ul id="steps" class="steps"></ul>
+      </div>
+
+      <div id="approval" class="card approval hidden">
+        <h3 id="approval-title"></h3>
+        <pre id="approval-content"></pre>
+        <textarea id="feedback" placeholder="Feedback (required if you reject)"></textarea>
+        <div class="row">
+          <button class="approve" id="btn-approve">Approve</button>
+          <button class="reject" id="btn-reject">Reject with feedback</button>
+          <span id="approval-error" class="error"></span>
+        </div>
+      </div>
+
+      <div id="result" class="card result hidden">
+        <div class="done"><h3>✓ Finished</h3></div>
+        <h4>Intent</h4><pre id="r-intent"></pre>
+        <div id="r-design-wrap"><h4>Design</h4><pre id="r-design"></pre></div>
+        <div id="r-code-wrap"><h4>Code</h4><pre id="r-code"></pre></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let stories = [], selected = null, runId = null;
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+  } : {});
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || res.statusText);
+  return data;
+}
+
+function el(tag, attrs = {}, text) {
+  const e = document.createElement(tag);
+  Object.assign(e, attrs);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+async function init() {
+  const cfg = await api("/api/config");
+  $("mode").textContent = cfg.mock ? "MOCK LLM" : "REAL LLM";
+  $("mode").className = "badge " + (cfg.mock ? "mock" : "real");
+
+  stories = await api("/api/stories");
+  const list = $("stories");
+  stories.forEach((s) => {
+    const card = el("div", { className: "card story" });
+    card.append(el("span", { className: "sid" }, s.id), el("h3", {}, s.title));
+    card.onclick = () => selectStory(s, card);
+    list.append(card);
+  });
+}
+
+function selectStory(s, card) {
+  selected = s;
+  document.querySelectorAll(".story").forEach((c) => c.classList.remove("selected"));
+  card.classList.add("selected");
+
+  const d = $("detail");
+  d.replaceChildren(
+    el("span", { className: "sid" }, s.id),
+    el("h3", {}, s.title),
+    el("h4", {}, "Description"),
+    el("p", {}, s.description),
+    el("h4", {}, "Acceptance criteria"),
+  );
+  const ul = el("ul");
+  s.acceptance_criteria.forEach((c) => ul.append(el("li", {}, c)));
+  const btn = el("button", { className: "primary" }, "▶ Run story");
+  btn.onclick = () => startRun(btn);
+  const row = el("div", { className: "row" });
+  row.append(btn);
+  d.append(ul, row);
+
+  $("run").classList.add("hidden");
+}
+
+async function startRun(btn) {
+  btn.disabled = true; btn.textContent = "Running…";
+  $("run").classList.remove("hidden");
+  $("steps").replaceChildren(el("li", { className: "empty" }, "Running…"));
+  $("approval").classList.add("hidden");
+  $("result").classList.add("hidden");
+  try {
+    render(await api("/api/runs", { story_id: selected.id }));
+  } catch (e) {
+    $("steps").replaceChildren(el("li", { className: "error" }, e.message));
+  }
+  btn.disabled = false; btn.textContent = "↻ Run again";
+}
+
+async function decide(action) {
+  const feedback = $("feedback").value.trim();
+  if (action === "reject" && !feedback) {
+    $("approval-error").textContent = "Please type what should change.";
+    return;
+  }
+  $("approval-error").textContent = "";
+  $("btn-approve").disabled = $("btn-reject").disabled = true;
+  try {
+    render(await api(`/api/runs/${runId}/decision`, { action, feedback }));
+  } catch (e) {
+    $("approval-error").textContent = e.message;
+  }
+  $("btn-approve").disabled = $("btn-reject").disabled = false;
+}
+
+function render(run) {
+  runId = run.run_id;
+  const steps = $("steps");
+  steps.replaceChildren();
+  run.steps.forEach((s) => {
+    const li = el("li");
+    li.append(el("span", { className: "n" }, s.node), el("span", { className: "d" }, s.detail));
+    steps.append(li);
+  });
+
+  const waiting = run.status === "awaiting_approval";
+  $("approval").classList.toggle("hidden", !waiting);
+  $("result").classList.toggle("hidden", waiting);
+
+  if (waiting) {
+    $("approval-title").textContent = `Approval needed: ${run.pending.stage.toUpperCase()}`;
+    $("approval-content").textContent = run.pending.content;
+    $("feedback").value = "";
+  } else {
+    const r = run.result;
+    $("r-intent").textContent = r.intent;
+    $("r-design").textContent = r.design || "";
+    $("r-code").textContent = r.code || "";
+    $("r-design-wrap").classList.toggle("hidden", !r.design);
+    $("r-code-wrap").classList.toggle("hidden", !r.code);
+  }
+}
+
+$("btn-approve").onclick = () => decide("approve");
+$("btn-reject").onclick = () => decide("reject");
+init().catch((e) => { $("stories").textContent = "Could not load: " + e.message; });
+</script>
+</body>
+</html>

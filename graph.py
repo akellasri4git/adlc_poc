@@ -30,3 +30,12 @@ def build_graph():
 
     # a checkpointer is REQUIRED for interrupt() - it saves the paused state
     return g.compile(checkpointer=MemorySaver())
+
+
+def pending_interrupt(app, config):
+    """Return the payload of the interrupt the graph is paused on, or None."""
+    snapshot = app.get_state(config)
+    for task in snapshot.tasks:
+        if task.interrupts:
+            return task.interrupts[0].value
+    return None

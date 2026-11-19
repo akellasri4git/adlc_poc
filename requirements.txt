@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+langgraph
+langchain-core
+pydantic
+
+# Only needed when MOCK=false in .env:
+# langchain-anthropic
